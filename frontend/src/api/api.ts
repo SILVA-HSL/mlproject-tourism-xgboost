@@ -5,7 +5,7 @@
  */
 
 import axios, { AxiosError } from 'axios';
-import type { TouristInput, PredictResponse } from '../types/types';
+import type { TouristInput, PredictResponse, CSVBatchPrediction } from '../types/types';
 
 // ─── Axios Instance ────────────────────────────────────────────────────────────
 
@@ -46,19 +46,60 @@ export async function predictSingle(input: TouristInput): Promise<PredictRespons
 }
 
 /**
- * Forecast for every month in `year` using the user's base scenario.
- * Calls /predict 12 times (month 1–12) and resolves all in parallel.
- * lag and rolling-mean values stay constant (user-supplied baseline).
+ * Rolling recursive 12-month forecast starting from the user-supplied month.
+ * Each iteration shifts the lags forward using the previous prediction:
+ *   lag_3 â† lag_2, lag_2 â† lag_1, lag_1 â† predicted
+ * Month/year roll forward automatically past December.
+ * Returns one entry per month in chronological order.
  */
-export async function forecastYear(
+export interface RollingPrediction {
+  month: number;
+  year: number;
+  predicted_tourists: number;
+}
+
+export async function forecastRolling(
   baseInput: TouristInput,
-  year: number
-): Promise<PredictResponse[]> {
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  const requests = months.map((month) =>
-    predictSingle({ ...baseInput, year, month })
-  );
-  return Promise.all(requests);
+): Promise<RollingPrediction[]> {
+  const results: RollingPrediction[] = [];
+
+  let month = baseInput.month;
+  let year = baseInput.year;
+  let lag1 = baseInput.lag_1;
+  let lag2 = baseInput.lag_2;
+  let lag3 = baseInput.lag_3;
+
+  for (let i = 0; i < 12; i++) {
+    const rolling_mean_3 = Math.round(((lag1 + lag2 + lag3) / 3) * 100) / 100;
+
+    const response = await predictSingle({
+      ...baseInput,
+      year,
+      month,
+      lag_1: lag1,
+      lag_2: lag2,
+      lag_3: lag3,
+      rolling_mean_3,
+    });
+
+    const predicted = response.predicted_tourists;
+    results.push({ month, year, predicted_tourists: predicted });
+
+    // Shift lags: next monthâ€™s lag_1 = this prediction
+    lag3 = lag2;
+    lag2 = lag1;
+    lag1 = predicted;
+
+    // Advance month/year — roll over December → January of next year
+    if (month === 12) {
+      month = 1;
+      year += 1;
+    } else {
+      month += 1;
+    }
+  }
+
+  return results;
 }
 
 /**
@@ -78,6 +119,24 @@ export async function batchPredict(
   }
 
   return results;
+}
+
+/**
+ * POST /predict-csv
+ * Upload a CSV file with a totalCount column. The backend computes lag
+ * features automatically and returns predictions for all rows.
+ */
+export async function predictBatchCSV(
+  file: File
+): Promise<{ count: number; predictions: CSVBatchPrediction[] }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const { data } = await apiClient.post<{ count: number; predictions: CSVBatchPrediction[] }>(
+    '/predict-csv',
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  );
+  return data;
 }
 
 export default apiClient;

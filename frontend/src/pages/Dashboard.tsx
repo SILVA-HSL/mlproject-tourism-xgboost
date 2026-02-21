@@ -30,15 +30,13 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
 import FlightLandIcon from '@mui/icons-material/FlightLand';
 
-import ForecastForm from '../components/ForecastForm';
+import ForecastForm, { DEFAULT_VALUES } from '../components/ForecastForm';
 import HistoryChart from '../components/HistoryChart';
 import HistoryTable from '../components/HistoryTable';
 import ExplanationPanel from '../components/ExplanationPanel';
-import CSVUpload from '../components/CSVUpload';
-import type { ChartDataPoint, ExplanationData } from '../types/types';
+import type { ChartDataPoint, ExplanationData, TouristInput } from '../types/types';
 
 // ─── Sidebar width ─────────────────────────────────────────────────────────────
 
@@ -46,15 +44,8 @@ const DRAWER_WIDTH = 240;
 
 // ─── Nav items ─────────────────────────────────────────────────────────────────
 
-interface NavItemFull {
-  id: ViewId;
-  label: string;
-  icon: React.ReactNode;
-  badge?: string;
-}
-
 // Because 'history' appears as two separate views we use a finer-grained ViewId
-type ViewId = 'forecast' | 'chart' | 'table' | 'explanations' | 'csv';
+type ViewId = 'forecast' | 'chart' | 'table' | 'explanations';
 
 interface NavItemFull {
   id: ViewId;
@@ -64,11 +55,10 @@ interface NavItemFull {
 }
 
 const NAV: NavItemFull[] = [
-  { id: 'forecast',     label: 'Forecast',      icon: <TrendingUpIcon />,         badge: 'New' },
-  { id: 'chart',        label: 'History Chart', icon: <ShowChartIcon /> },
-  { id: 'table',        label: 'History Table', icon: <TableChartIcon /> },
-  { id: 'explanations', label: 'Explanations',  icon: <LightbulbOutlinedIcon /> },
-  { id: 'csv',          label: 'CSV Upload',    icon: <UploadFileIcon /> },
+  { id: 'forecast',     label: 'Forecast',        icon: <TrendingUpIcon />,         badge: 'New' },
+  { id: 'chart',        label: 'Forecast Chart',  icon: <ShowChartIcon /> },
+  { id: 'table',        label: 'Forecast Table',  icon: <TableChartIcon /> },
+  { id: 'explanations', label: 'Explanations',    icon: <LightbulbOutlinedIcon /> },
 ];
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -83,6 +73,9 @@ const Dashboard: React.FC = () => {
   // Shared forecast state lifted from ForecastForm
   const [forecastData, setForecastData] = useState<ChartDataPoint[]>([]);
   const [explanation, setExplanation] = useState<ExplanationData | null>(null);
+
+  // Persisted form state – survives tab switches until user explicitly clears
+  const [formValues, setFormValues] = useState<TouristInput>(DEFAULT_VALUES);
 
   const handleDrawerToggle = () => setMobileOpen((prev) => !prev);
 
@@ -188,6 +181,8 @@ const Dashboard: React.FC = () => {
       case 'forecast':
         return (
           <ForecastForm
+            formValues={formValues}
+            setFormValues={setFormValues}
             onForecastComplete={(points) => {
               setForecastData(points);
             }}
@@ -200,8 +195,6 @@ const Dashboard: React.FC = () => {
         return <HistoryTable forecastData={forecastData.length ? forecastData : undefined} />;
       case 'explanations':
         return <ExplanationPanel explanation={explanation} />;
-      case 'csv':
-        return <CSVUpload />;
       default:
         return null;
     }

@@ -32,7 +32,7 @@ import {
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import type { TouristInput, ChartDataPoint, ExplanationData, ShapEntry } from '../types/types';
-import { forecastYear } from '../api/api';
+import { forecastRolling } from '../api/api';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -43,16 +43,17 @@ const MONTH_LABELS = [
 
 const CURRENT_YEAR = new Date().getFullYear();
 
-/** Countries available in the model's label encoder (adjust to match your data). */
+/** Countries available in the model's label encoder – exact strings used during training. */
 const ORIGIN_COUNTRIES = [
-  'China', 'India', 'United Kingdom', 'USA', 'Germany',
-  'France', 'Australia', 'Japan', 'Korea', 'Russia',
-  'Italy', 'Canada', 'Malaysia', 'Singapore', 'Thailand',
+  'Australia', 'Bangladesh', 'Canada', 'China', 'France', 'Germany',
+  'India', 'Israel', 'Italy', 'Japan', 'Kazakhstan', 'Maldives',
+  'Netherlands', 'Pakistan', 'Poland', 'Russia', 'Saudi Arabia', 'Spain',
+  'Switzerland', 'Ukraine', 'United Kingdom', 'United States',
 ];
 
 /** Default form values – sensible mid-range baselines. */
-const DEFAULT_VALUES: TouristInput = {
-  originCountry: 'China',
+export const DEFAULT_VALUES: TouristInput = {
+  originCountry: 'China', // China is index 3 in the label encoder
   year: CURRENT_YEAR,
   month: 1,
   dollarRate: 300,
@@ -75,6 +76,8 @@ const DEFAULT_VALUES: TouristInput = {
 interface ForecastFormProps {
   onForecastComplete: (points: ChartDataPoint[]) => void;
   onExplanationReady: (data: ExplanationData) => void;
+  formValues: TouristInput;
+  setFormValues: React.Dispatch<React.SetStateAction<TouristInput>>;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -125,8 +128,9 @@ function approximateShap(input: TouristInput, prediction: number): ExplanationDa
 const ForecastForm: React.FC<ForecastFormProps> = ({
   onForecastComplete,
   onExplanationReady,
+  formValues,
+  setFormValues,
 }) => {
-  const [formValues, setFormValues] = useState<TouristInput>(DEFAULT_VALUES);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -136,7 +140,17 @@ const ForecastForm: React.FC<ForecastFormProps> = ({
   const handleNumberChange =
     (field: keyof TouristInput) =>
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      setFormValues((prev) => ({ ...prev, [field]: Number.parseFloat(e.target.value) || 0 }));
+      const value = Number.parseFloat(e.target.value) || 0;
+      setFormValues((prev) => {
+        const updated = { ...prev, [field]: value };
+        if (field === 'lag_1' || field === 'lag_2' || field === 'lag_3') {
+          const l1 = field === 'lag_1' ? value : prev.lag_1;
+          const l2 = field === 'lag_2' ? value : prev.lag_2;
+          const l3 = field === 'lag_3' ? value : prev.lag_3;
+          updated.rolling_mean_3 = Math.round(((l1 + l2 + l3) / 3) * 100) / 100;
+        }
+        return updated;
+      });
     };
 
   const handleSelectChange =
@@ -154,13 +168,25 @@ const ForecastForm: React.FC<ForecastFormProps> = ({
     setSuccess(false);
 
     try {
-      const results = await forecastYear(formValues, formValues.year);
+      // Forecast starts from the month AFTER the last known month.
+      // The user-supplied month/year is purely for lag reference — not the first predicted month.
+      const lastMonth = formValues.month;
+      const lastYear = formValues.year;
+      const startMonth = lastMonth === 12 ? 1 : lastMonth + 1;
+      const startYear  = lastMonth === 12 ? lastYear + 1 : lastYear;
 
-      // Build ChartDataPoint array (one per month)
-      const points: ChartDataPoint[] = results.map((r, idx) => ({
-        label: `${MONTH_LABELS[idx]} ${formValues.year}`,
-        month: idx + 1,
-        year: formValues.year,
+      const results = await forecastRolling({
+        ...formValues,
+        month: startMonth,
+        year: startYear,
+      });
+
+      // Build ChartDataPoint array — each entry uses the actual rolling month/year
+      const points: ChartDataPoint[] = results.map((r) => ({
+        label: `${MONTH_LABELS[r.month - 1]} ${r.year}`,
+        month: r.month,
+        year: r.year,
+        originCountry: formValues.originCountry,
         predicted: Math.round(r.predicted_tourists),
       }));
 
@@ -224,18 +250,39 @@ const ForecastForm: React.FC<ForecastFormProps> = ({
         {/* ── Year ── */}
         <Grid item xs={12} sm={6} md={4}>
           <FormControl fullWidth>
-            <InputLabel>Forecast Year</InputLabel>
+            <InputLabel>Last Known Year</InputLabel>
             <Select
               value={formValues.year}
-              label="Forecast Year"
+              label="Last Known Year"
               onChange={(e) => handleSelectChange('year')(e.target.value as number)}
             >
-              {[CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1].map((y) => (
+              {[CURRENT_YEAR - 2, CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1].map((y) => (
                 <MenuItem key={y} value={y}>
                   {y}
                 </MenuItem>
               ))}
             </Select>
+          </FormControl>
+        </Grid>
+
+        {/* ── Last Known Month ── */}
+        <Grid item xs={12} sm={6} md={4}>
+          <FormControl fullWidth>
+            <InputLabel>Last Known Month</InputLabel>
+            <Select
+              value={formValues.month}
+              label="Last Known Month"
+              onChange={(e) => handleSelectChange('month')(e.target.value as number)}
+            >
+              {MONTH_LABELS.map((label, idx) => (
+                <MenuItem key={idx + 1} value={idx + 1}>
+                  {label}
+                </MenuItem>
+              ))}
+            </Select>
+            <Typography variant="caption" color="text.secondary" mt={0.5} px={0.5}>
+              Forecast starts from the following month
+            </Typography>
           </FormControl>
         </Grid>
 
@@ -393,7 +440,7 @@ const ForecastForm: React.FC<ForecastFormProps> = ({
         <Grid item xs={12}>
           <Divider sx={{ my: 1 }}>
             <Typography variant="caption" color="text.secondary">
-              Lag Features (previous months' actual counts)
+              Historical Tourist Arrivals (relative to Last Known Month)
             </Typography>
           </Divider>
         </Grid>
@@ -401,52 +448,65 @@ const ForecastForm: React.FC<ForecastFormProps> = ({
         {/* ── Lag 1 ── */}
         <Grid item xs={12} sm={6} md={3}>
           <TextField
-            label="Lag 1 (t−1)"
+            label="Tourists Last Month"
             type="number"
             fullWidth
             value={formValues.lag_1}
             onChange={handleNumberChange('lag_1')}
-            helperText="Previous month count"
+            helperText="Actual arrivals in Last Known Month"
           />
         </Grid>
 
         {/* ── Lag 2 ── */}
         <Grid item xs={12} sm={6} md={3}>
           <TextField
-            label="Lag 2 (t−2)"
+            label="Tourists 2 Months Ago"
             type="number"
             fullWidth
             value={formValues.lag_2}
             onChange={handleNumberChange('lag_2')}
+            helperText="Actual arrivals the month before that"
           />
         </Grid>
 
         {/* ── Lag 3 ── */}
         <Grid item xs={12} sm={6} md={3}>
           <TextField
-            label="Lag 3 (t−3)"
+            label="Tourists 3 Months Ago"
             type="number"
             fullWidth
             value={formValues.lag_3}
             onChange={handleNumberChange('lag_3')}
+            helperText="Actual arrivals 2 months before last"
           />
         </Grid>
 
         {/* ── Rolling Mean 3 ── */}
         <Grid item xs={12} sm={6} md={3}>
           <TextField
-            label="Rolling Mean (3 mo)"
+            label="3-Month Average Arrivals"
             type="number"
             fullWidth
             value={formValues.rolling_mean_3}
-            onChange={handleNumberChange('rolling_mean_3')}
-            helperText="Mean of last 3 months"
+            InputProps={{ readOnly: true }}
+            helperText="Auto-calculated from above 3 values"
+            sx={{ '& .MuiInputBase-input': { color: 'text.secondary', fontStyle: 'italic' } }}
           />
         </Grid>
       </Grid>
 
       {/* ── Submit ── */}
-      <Box mt={4} display="flex" justifyContent="flex-end">
+      <Box mt={4} display="flex" justifyContent="flex-end" gap={2}>
+        <Button
+          type="button"
+          variant="outlined"
+          size="large"
+          disabled={loading}
+          onClick={() => setFormValues(DEFAULT_VALUES)}
+          sx={{ px: 4, py: 1.5, borderRadius: 3, fontWeight: 600 }}
+        >
+          Clear
+        </Button>
         <Button
           type="submit"
           variant="contained"
@@ -482,9 +542,9 @@ const ForecastForm: React.FC<ForecastFormProps> = ({
         >
           <CardContent>
             <Typography variant="body2" color="primary.dark">
-              <strong>Tip:</strong> Navigate to the <em>Forecast Chart</em> tab to see the
-              12-month prediction curve, or to <em>Explanations</em> to understand which
-              features drove the result.
+              <strong>Tip:</strong> The chart shows a 12-month rolling forecast starting from the month
+              after your <em>Last Known Month</em>. Navigate to <em>Forecast Chart</em> or{' '}
+              <em>Forecast Table</em> to view the results.
             </Typography>
           </CardContent>
         </Card>

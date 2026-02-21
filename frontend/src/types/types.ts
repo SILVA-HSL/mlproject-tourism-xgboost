@@ -37,6 +37,21 @@ export interface CSVPredictionRow extends Record<string, string | number> {
   predicted_tourists: number;
 }
 
+/** Response row from POST /predict-csv (backend computes lags). */
+export interface CSVBatchPrediction {
+  row: number;
+  originCountry: string;
+  year: number;
+  month: number;
+  dollarRate: number;
+  lag_1: number;
+  lag_2: number;
+  lag_3: number;
+  rolling_mean_3: number;
+  actual_tourists: number;
+  predicted_tourists: number;
+}
+
 // ─── Chart / History Types ─────────────────────────────────────────────────────
 
 /**
@@ -48,6 +63,8 @@ export interface ChartDataPoint {
   /** Month number 1–12 for sorting convenience. */
   month: number;
   year: number;
+  /** Origin country for the forecast scenario. */
+  originCountry?: string;
   /** Actual historical count (undefined for future months). */
   actual?: number;
   /** Model-predicted tourist count. */
