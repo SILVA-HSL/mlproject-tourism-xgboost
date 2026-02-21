@@ -58,6 +58,9 @@ desktop.ini
 *.suo
 *.user
 
+# ─── Lock files (platform-specific, regenerated on CI) ───────────────────────
+package-lock.json
+
 # ─── Logs ─────────────────────────────────────────────────────────────────────
 logs/
 *.log
