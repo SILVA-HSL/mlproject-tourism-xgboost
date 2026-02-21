@@ -9,6 +9,7 @@ import { createTheme, ThemeProvider, PaletteMode, Box, CssBaseline, IconButton, 
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import Dashboard from './pages/Dashboard';
+import LandingPage from './pages/LandingPage';
 
 // ─── Theme factory ─────────────────────────────────────────────────────────────
 
@@ -70,7 +71,13 @@ function buildTheme(mode: PaletteMode) {
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<PaletteMode>('light');
+  const [page, setPage] = useState<'landing' | 'dashboard'>('landing');
   const theme = useMemo(() => buildTheme(mode), [mode]);
+
+  // Landing page has its own full-screen dark design – skip the MUI theme wrapper for it
+  if (page === 'landing') {
+    return <LandingPage onEnterDashboard={() => setPage('dashboard')} />;
+  }
 
   return (
     <ThemeProvider theme={theme}>
