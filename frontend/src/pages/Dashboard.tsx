@@ -31,11 +31,15 @@ import ShowChartIcon from '@mui/icons-material/ShowChart';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import FlightLandIcon from '@mui/icons-material/FlightLand';
+import ScienceIcon from '@mui/icons-material/Science';
+import InsightsIcon from '@mui/icons-material/Insights';
 
 import ForecastForm, { DEFAULT_VALUES } from '../components/ForecastForm';
 import HistoryChart from '../components/HistoryChart';
 import HistoryTable from '../components/HistoryTable';
 import ExplanationPanel from '../components/ExplanationPanel';
+import ModelInfo from '../components/ModelInfo';
+import Explainability from '../components/Explainability';
 import type { ChartDataPoint, ExplanationData, TouristInput } from '../types/types';
 
 // ─── Sidebar width ─────────────────────────────────────────────────────────────
@@ -45,7 +49,7 @@ const DRAWER_WIDTH = 240;
 // ─── Nav items ─────────────────────────────────────────────────────────────────
 
 // Because 'history' appears as two separate views we use a finer-grained ViewId
-type ViewId = 'forecast' | 'chart' | 'table' | 'explanations';
+type ViewId = 'forecast' | 'chart' | 'table' | 'explanations' | 'model_info' | 'explainability';
 
 interface NavItemFull {
   id: ViewId;
@@ -59,6 +63,8 @@ const NAV: NavItemFull[] = [
   { id: 'chart',        label: 'Forecast Chart',  icon: <ShowChartIcon /> },
   { id: 'table',        label: 'Forecast Table',  icon: <TableChartIcon /> },
   { id: 'explanations', label: 'Explanations',    icon: <LightbulbOutlinedIcon /> },
+  { id: 'model_info',     label: 'Model Info',       icon: <ScienceIcon /> },
+  { id: 'explainability', label: 'Explainability',  icon: <InsightsIcon /> },
 ];
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -195,6 +201,10 @@ const Dashboard: React.FC = () => {
         return <HistoryTable forecastData={forecastData.length ? forecastData : undefined} />;
       case 'explanations':
         return <ExplanationPanel explanation={explanation} />;
+      case 'model_info':
+        return <ModelInfo />;
+      case 'explainability':
+        return <Explainability />;
       default:
         return null;
     }
