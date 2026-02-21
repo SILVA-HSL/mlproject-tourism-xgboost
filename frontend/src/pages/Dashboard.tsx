@@ -29,7 +29,6 @@ import MenuIcon from '@mui/icons-material/Menu';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import TableChartIcon from '@mui/icons-material/TableChart';
-import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import FlightLandIcon from '@mui/icons-material/FlightLand';
 import ScienceIcon from '@mui/icons-material/Science';
 import InsightsIcon from '@mui/icons-material/Insights';
@@ -37,10 +36,9 @@ import InsightsIcon from '@mui/icons-material/Insights';
 import ForecastForm, { DEFAULT_VALUES } from '../components/ForecastForm';
 import HistoryChart from '../components/HistoryChart';
 import HistoryTable from '../components/HistoryTable';
-import ExplanationPanel from '../components/ExplanationPanel';
 import ModelInfo from '../components/ModelInfo';
 import Explainability from '../components/Explainability';
-import type { ChartDataPoint, ExplanationData, TouristInput } from '../types/types';
+import type { ChartDataPoint, TouristInput } from '../types/types';
 
 // ─── Sidebar width ─────────────────────────────────────────────────────────────
 
@@ -49,7 +47,7 @@ const DRAWER_WIDTH = 240;
 // ─── Nav items ─────────────────────────────────────────────────────────────────
 
 // Because 'history' appears as two separate views we use a finer-grained ViewId
-type ViewId = 'forecast' | 'chart' | 'table' | 'explanations' | 'model_info' | 'explainability';
+type ViewId = 'forecast' | 'chart' | 'table' | 'model_info' | 'explainability';
 
 interface NavItemFull {
   id: ViewId;
@@ -62,7 +60,6 @@ const NAV: NavItemFull[] = [
   { id: 'forecast',     label: 'Forecast',        icon: <TrendingUpIcon />,         badge: 'New' },
   { id: 'chart',        label: 'Forecast Chart',  icon: <ShowChartIcon /> },
   { id: 'table',        label: 'Forecast Table',  icon: <TableChartIcon /> },
-  { id: 'explanations', label: 'Explanations',    icon: <LightbulbOutlinedIcon /> },
   { id: 'model_info',     label: 'Model Info',       icon: <ScienceIcon /> },
   { id: 'explainability', label: 'Explainability',  icon: <InsightsIcon /> },
 ];
@@ -78,7 +75,6 @@ const Dashboard: React.FC = () => {
 
   // Shared forecast state lifted from ForecastForm
   const [forecastData, setForecastData] = useState<ChartDataPoint[]>([]);
-  const [explanation, setExplanation] = useState<ExplanationData | null>(null);
 
   // Persisted form state – survives tab switches until user explicitly clears
   const [formValues, setFormValues] = useState<TouristInput>(DEFAULT_VALUES);
@@ -192,15 +188,12 @@ const Dashboard: React.FC = () => {
             onForecastComplete={(points) => {
               setForecastData(points);
             }}
-            onExplanationReady={(data) => setExplanation(data)}
           />
         );
       case 'chart':
         return <HistoryChart forecastData={forecastData.length ? forecastData : undefined} />;
       case 'table':
         return <HistoryTable forecastData={forecastData.length ? forecastData : undefined} />;
-      case 'explanations':
-        return <ExplanationPanel explanation={explanation} />;
       case 'model_info':
         return <ModelInfo />;
       case 'explainability':

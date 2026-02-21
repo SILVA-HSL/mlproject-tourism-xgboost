@@ -75,7 +75,7 @@ export const DEFAULT_VALUES: TouristInput = {
 
 interface ForecastFormProps {
   onForecastComplete: (points: ChartDataPoint[]) => void;
-  onExplanationReady: (data: ExplanationData) => void;
+  onExplanationReady?: (data: ExplanationData) => void;
   formValues: TouristInput;
   setFormValues: React.Dispatch<React.SetStateAction<TouristInput>>;
 }
@@ -196,7 +196,7 @@ const ForecastForm: React.FC<ForecastFormProps> = ({
       const avgPrediction =
         results.reduce((sum, r) => sum + r.predicted_tourists, 0) / results.length;
       const explanation = approximateShap(formValues, avgPrediction);
-      onExplanationReady(explanation);
+      onExplanationReady?.(explanation);
 
       setSuccess(true);
     } catch (err) {
