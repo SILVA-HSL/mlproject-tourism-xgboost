@@ -14,7 +14,7 @@ import type { TouristInput, PredictResponse, CSVBatchPrediction } from '../types
  * In production, set VITE_API_BASE_URL in your .env file.
  */
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'https://mlproject-tourism-xgboost-1rh9tx95v.vercel.app/',
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'https://mlproject-tourism-xgboost-495btdvw1.vercel.app/',
   headers: {
     'Content-Type': 'application/json',
   },
