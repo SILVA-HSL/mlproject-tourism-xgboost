@@ -31,13 +31,13 @@ env/
 ENV/
 
 # ─── ML artefacts ─────────────────────────────────────────────────────────────
-*.pkl
+# *.pkl
 *.joblib
 *.h5
 *.pt
 *.pth
 *.onnx
-*.csv
+# *.csv
 *.parquet
 *.feather
 *.npy
