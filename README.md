@@ -70,3 +70,54 @@ cd mlproject-tourism-xgboost
    ```
    http://localhost:8000/docs
    ```
+
+---
+
+## Running the Backend with Docker
+
+The backend is available as a pre-built Docker image on Docker Hub — no need to install Python or any dependencies manually.
+
+### Prerequisites
+
+- [Docker](https://www.docker.com/get-started) installed and running
+
+### Pull and Run the Image
+
+1. **Pull the image from Docker Hub**
+
+   ```bash
+   docker pull shanuka21/ml-project:latest
+   ```
+
+2. **Run the container**
+
+   ```bash
+   docker run -d -p 8000:8000 shanuka21/ml-project:latest
+   ```
+
+   The backend API will be available at `http://localhost:8000`.
+
+3. **Access the API docs**
+
+   ```
+   http://localhost:8000/docs
+   ```
+
+### Useful Docker Commands
+
+| Command | Description |
+|---|---|
+| `docker ps` | List running containers |
+| `docker stop <container_id>` | Stop the running container |
+| `docker rm <container_id>` | Remove the container |
+| `docker pull shanuka21/ml-project:latest` | Pull the latest image |
+
+### Mapping a Custom Port
+
+If port `8000` is already in use on your machine, map to a different host port:
+
+```bash
+docker run -d -p 9000:8000 shanuka21/ml-project:latest
+```
+
+The API will then be available at `http://localhost:9000`.
